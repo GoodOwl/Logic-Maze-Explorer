@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logic Maze - Learn Programming & Algorithms</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background-color: #f3f4f6;
+      user-select: none;
+    }
+
+    h1, h2, h3, button {
+      font-family: 'Fredoka', sans-serif;
+    }
+
+    /* Grid Cell Transitions */
+    .grid-cell {
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    /* Hero Avatar Rotation Animation */
+    .hero-avatar {
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Shake / Bug animation */
+    @keyframes blinkRed {
+      0%, 100% { background-color: transparent; }
+      20%, 60% { background-color: rgba(239, 68, 68, 0.35); transform: translateX(-4px); }
+      40%, 80% { background-color: rgba(239, 68, 68, 0.35); transform: translateX(4px); }
+    }
+
+    .bug-shake {
+      animation: blinkRed 0.6s ease-in-out;
+    }
+
+    /* Active Action Highlight Pulse */
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0px rgba(99, 102, 241, 0.6); transform: scale(1.05); }
+      50% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); transform: scale(1.05); }
+    }
+
+    .action-active {
+      animation: pulseGlow 1s infinite;
+      border-color: #4f46e5 !important;
+      background-color: #e0e7ff !important;
+    }
+
+    /* Confetti Styling */
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: #f00;
+      opacity: 0.8;
+      border-radius: 2px;
+      animation: fall 2.5s linear forwards;
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between p-4 md:p-6">
+
+  <!-- Top Navigation & Header -->
+  <header class="max-w-6xl w-full mx-auto mb-4 text-center flex flex-col md:flex-row items-center justify-between gap-2 border-b border-slate-200 pb-3">
+    <div class="flex items-center gap-3">
+      <div class="bg-indigo-500 text-white p-2.5 rounded-2xl shadow-md text-2xl">🧩</div>
+      <div class="text-left">
+        <h1 class="text-2xl md:text-3xl font-bold text-indigo-600 tracking-wide">Logic Maze Explorer</h1>
+        <p class="text-xs md:text-sm text-slate-500 font-medium">Program your hero step-by-step to reach the treasure!</p>
+      </div>
+    </div>
+    <div class="bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl text-xs md:text-sm text-indigo-700 font-semibold flex items-center gap-2 shadow-sm">
+      <span>💡 Tip:</span> Drag stones onto the grid or click cells to set obstacles!
+    </div>
+  </header>
+
+  <!-- Main Application Workspace -->
+  <main class="max-w-6xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-grow">
+
+    <!-- LEFT COLUMN: Action Buttons -->
+    <section class="lg:col-span-3 bg-white p-5 rounded-3xl shadow-sm border border-slate-200 flex flex-col gap-4">
+      <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2 border-b border-slate-100 pb-2">
+        <span>🎮</span> Actions
+      </h2>
+      <p class="text-xs text-slate-500">Add movements to your queue:</p>
+
+      <div class="flex flex-col gap-3">
+        <button onclick="addAction('MOVE')" class="group relative flex items-center gap-3 p-3.5 bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-200 hover:border-emerald-400 rounded-2xl text-emerald-800 font-bold transition-all active:scale-95 shadow-sm">
+          <span class="text-2xl bg-emerald-200 p-2 rounded-xl group-hover:scale-110 transition-transform">⬆️</span>
+          <div class="text-left">
+            <div class="text-base leading-tight">Move Forward</div>
+            <div class="text-xs text-emerald-600 font-normal">Step 1 square</div>
+          </div>
+        </button>
+
+        <button onclick="addAction('LEFT')" class="group relative flex items-center gap-3 p-3.5 bg-sky-50 hover:bg-sky-100 border-2 border-sky-200 hover:border-sky-400 rounded-2xl text-sky-800 font-bold transition-all active:scale-95 shadow-sm">
+          <span class="text-2xl bg-sky-200 p-2 rounded-xl group-hover:scale-110 transition-transform">↩️️</span>
+          <div class="text-left">
+            <div class="text-base leading-tight">Turn Left</div>
+            <div class="text-xs text-sky-600 font-normal">Rotate -90°</div>
+          </div>
+        </button>
+
+        <button onclick="addAction('RIGHT')" class="group relative flex items-center gap-3 p-3.5 bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 hover:border-purple-400 rounded-2xl text-purple-800 font-bold transition-all active:scale-95 shadow-sm">
+          <span class="text-2xl bg-purple-200 p-2 rounded-xl group-hover:scale-110 transition-transform">↪️</span>
+          <div class="text-left">
+            <div class="text-base leading-tight">Turn Right</div>
+            <div class="text-xs text-purple-600 font-normal">Rotate +90°</div>
+          </div>
+        </button>
+      </div>
+
+      <div class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs flex flex-col gap-1">
+        <span class="font-bold flex items-center gap-1">🧭 Hero Orientation:</span>
+        <span id="heroFacingText" class="font-semibold text-amber-900">Facing UP ⬆️</span>
+      </div>
+    </section>
+
+    <!-- CENTER COLUMN: Maze Grid & Execution Controls -->
+    <section class="lg:col-span-6 flex flex-col items-center gap-5 bg-white p-5 rounded-3xl shadow-sm border border-slate-200">
+      
+      <div id="boardContainer" class="relative w-full max-w-[380px] aspect-square p-3 bg-slate-100 border-4 border-slate-300 rounded-3xl shadow-inner flex items-center justify-center overflow-hidden">
+        <div id="gridBoard" class="grid w-full h-full gap-1.5 transition-all duration-300">
+          <!-- Dynamic Grid Cells generated in JS -->
+        </div>
+      </div>
+
+      <!-- Action Queue Bar -->
+      <div class="w-full flex flex-col gap-2">
+        <div class="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider px-1">
+          <span>Program Queue (<span id="queueCount">0</span>)</span>
+          <button onclick="clearQueue()" class="text-rose-500 hover:text-rose-700 normal-case font-semibold text-xs flex items-center gap-1 hover:underline">
+            🗑️ Clear Queue
+          </button>
+        </div>
+
+        <div id="actionQueue" class="w-full min-h-[72px] p-2 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300">
+          <span id="emptyQueueMsg" class="text-xs text-slate-400 mx-auto italic font-medium">No actions added yet. Click action buttons to build your code!</span>
+        </div>
+      </div>
+
+      <!-- Play & Execution Controls -->
+      <div class="w-full flex items-center gap-3">
+        <button id="playBtn" onclick="runProgram()" class="flex-1 py-3.5 px-6 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-indigo-200 transition-all flex items-center justify-center gap-2 active:scale-95">
+          <span>▶️️</span> PLAY PROGRAM
+        </button>
+        <button id="resetBtn" onclick="resetHero()" class="py-3.5 px-5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-bold text-base rounded-2xl border border-slate-300 transition-all active:scale-95 flex items-center gap-1.5" title="Reset hero position">
+          <span>↺</span> Reset Hero
+        </button>
+      </div>
+
+    </section>
+
+    <!-- RIGHT COLUMN: Setup Controls for Teachers/Students -->
+    <section class="lg:col-span-3 bg-white p-5 rounded-3xl shadow-sm border border-slate-200 flex flex-col gap-4">
+      <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2 border-b border-slate-100 pb-2">
+        <span>🛠️</span> Teacher Controls
+      </h2>
+
+      <!-- Stone Tool -->
+      <div class="flex flex-col gap-2">
+        <label class="text-xs font-semibold text-slate-500">Obstacle Tool:</label>
+        <div id="stoneDraggable" draggable="true" ondragstart="handleDragStart(event)" class="p-3 bg-amber-100 border-2 border-dashed border-amber-400 rounded-2xl flex items-center justify-between cursor-grab active:cursor-grabbing hover:bg-amber-200 transition-colors shadow-sm">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">🪨</span>
+            <span class="text-xs font-bold text-amber-900">Stone Obstacle</span>
+          </div>
+          <span class="text-[10px] bg-amber-300 text-amber-900 font-bold px-2 py-0.5 rounded-full uppercase">Drag Me</span>
+        </div>
+        <p class="text-[11px] text-slate-400">Tip: Drag onto cell or click any cell to toggle stones.</p>
+      </div>
+
+      <!-- Board Size Presets -->
+      <div class="flex flex-col gap-2 mt-2">
+        <label class="text-xs font-semibold text-slate-500">Board Size Presets:</label>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="setBoardSize(5)" id="btn5x5" class="py-2.5 px-3 bg-indigo-50 border-2 border-indigo-400 text-indigo-700 font-bold text-xs rounded-xl shadow-sm hover:bg-indigo-100 transition-all">
+            📐 Standard (5x5)
+          </button>
+          <button onclick="setBoardSize(3)" id="btn3x3" class="py-2.5 px-3 bg-slate-50 border-2 border-slate-200 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-100 transition-all">
+            🔍 Mini (3x3)
+          </button>
+        </div>
+      </div>
+
+      <!-- Board Clear Controls -->
+      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col gap-2">
+        <button onclick="clearBoard()" class="w-full py-2.5 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition-all flex items-center justify-center gap-2">
+          <span>🧹</span> Clear All Stones
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="max-w-6xl w-full mx-auto mt-6 text-center text-xs text-slate-400 border-t border-slate-200 pt-3">
+    Logic Maze Web Game &bull; Teaching Logical Thinking & Step-by-Step Programming
+  </footer>
+
+  <!-- BUG MODAL -->
+  <div id="bugModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border-4 border-rose-400 flex flex-col items-center gap-4 animate-bounce-once">
+      <div class="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center text-5xl shadow-inner">
+        🐞
+      </div>
+      <div>
+        <h3 class="text-2xl font-bold text-rose-600">BUG DETECTED!</h3>
+        <p id="bugMsg" class="text-sm text-slate-600 mt-1 font-medium">The hero hit an obstacle or moved off the grid!</p>
+      </div>
+      <button onclick="closeModal('bugModal')" class="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95">
+        Try Again 🔄
+      </button>
+    </div>
+  </div>
+
+  <!-- SUCCESS MODAL -->
+  <div id="successModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border-4 border-emerald-400 flex flex-col items-center gap-4 relative overflow-hidden">
+      <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-5xl shadow-inner">
+        💎
+      </div>
+      <div>
+        <h3 class="text-2xl font-bold text-emerald-600">SUCCESS! 🎉</h3>
+        <p class="text-sm text-slate-600 mt-1 font-medium">Awesome logic! Your hero found the treasure!</p>
+      </div>
+      <button onclick="closeModal('successModal')" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95">
+        Play Next Level 🚀
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // State Variables
+    let gridSize = 5; // Default 5x5
+    let hero = { x: 0, y: 4, facing: 0 }; // facing: 0=UP, 1=RIGHT, 2=DOWN, 3=LEFT
+    let treasure = { x: 4, y: 0 };
+    let stones = new Set(); // Stores 'x,y' strings
+    let queue = [];
+    let isPlaying = false;
+    let activeExecutionTimer = null;
+
+    // Directions vectors: UP, RIGHT, DOWN, LEFT
+    const DIR_VECTORS = [
+      { x: 0, y: -1, name: 'UP ⬆️' },
+      { x: 1, y: 0, name: 'RIGHT ↪️' },
+      { x: 0, y: 1, name: 'DOWN ⬇️' },
+      { x: -1, y: 0, name: 'LEFT ↩️' }
+    ];
+
+    // Audio Synthesizer via Web Audio API
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'step') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+      } else if (type === 'turn') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+      } else if (type === 'bug') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(110, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+      } else if (type === 'win') {
+        const notes = [261.63, 329.63, 392.00, 523.25]; // C E G C
+        notes.forEach((freq, idx) => {
+          const noteOsc = audioCtx.createOscillator();
+          const noteGain = audioCtx.createGain();
+          noteOsc.connect(noteGain);
+          noteGain.connect(audioCtx.destination);
+          noteOsc.type = 'sine';
+          noteOsc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.12);
+          noteGain.gain.setValueAtTime(0.2, audioCtx.currentTime + idx * 0.12);
+          noteGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + idx * 0.12 + 0.3);
+          noteOsc.start(audioCtx.currentTime + idx * 0.12);
+          noteOsc.stop(audioCtx.currentTime + idx * 0.12 + 0.3);
+        });
+      }
+    }
+
+    function initBoard() {
+      const board = document.getElementById('gridBoard');
+      board.innerHTML = '';
+      board.style.gridTemplateColumns = `repeat(${gridSize}, minmax(0, 1fr))`;
+      board.style.gridTemplateRows = `repeat(${gridSize}, minmax(0, 1fr))`;
+
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          const cell = document.createElement('div');
+          cell.className = 'grid-cell w-full h-full bg-white border border-slate-200 rounded-2xl flex items-center justify-center relative cursor-pointer hover:bg-slate-50 shadow-sm';
+          cell.dataset.x = x;
+          cell.dataset.y = y;
+
+          // Drag and Drop listeners
+          cell.ondragover = (e) => e.preventDefault();
+          cell.ondrop = (e) => handleDrop(e, x, y);
+          cell.onclick = () => handleCellClick(x, y);
+
+          board.appendChild(cell);
+        }
+      }
+      renderBoardObjects();
+    }
+
+    function renderBoardObjects() {
+      // Clear previous cell contents
+      document.querySelectorAll('.grid-cell').forEach(cell => cell.innerHTML = '');
+
+      // Render Stones
+      stones.forEach(key => {
+        const [sx, sy] = key.split(',').map(Number);
+        const cell = getCell(sx, sy);
+        if (cell) {
+          cell.innerHTML = `<span class="text-2xl md:text-3xl select-none animate-pop">🪨</span>`;
+        }
+      });
+
+      // Render Treasure
+      const treasureCell = getCell(treasure.x, treasure.y);
+      if (treasureCell) {
+        treasureCell.innerHTML = `<span class="text-2xl md:text-3xl select-none animate-pulse">💎</span>`;
+      }
+
+      // Render Hero
+      const heroCell = getCell(hero.x, hero.y);
+      if (heroCell) {
+        const rotationDeg = hero.facing * 90;
+        heroCell.innerHTML = `
+          <div class="hero-avatar text-2xl md:text-3xl flex items-center justify-center" style="transform: rotate(${rotationDeg}deg);">
+            🤖
+          </div>
+        `;
+      }
+
+      // Update orientation text label
+      document.getElementById('heroFacingText').innerText = `Facing ${DIR_VECTORS[hero.facing].name}`;
+    }
+
+    function getCell(x, y) {
+      return document.querySelector(`.grid-cell[data-x="${x}"][data-y="${y}"]`);
+    }
+
+    function handleDragStart(e) {
+      e.dataTransfer.setData('text/plain', 'stone');
+    }
+
+    function handleDrop(e, x, y) {
+      e.preventDefault();
+      toggleStone(x, y);
+    }
+
+    function handleCellClick(x, y) {
+      if (isPlaying) return;
+      toggleStone(x, y);
+    }
+
+    function toggleStone(x, y) {
+      // Avoid placing stone on hero or treasure
+      if ((x === hero.x && y === hero.y) || (x === treasure.x && y === treasure.y)) return;
+
+      const key = `${x},${y}`;
+      if (stones.has(key)) {
+        stones.delete(key);
+      } else {
+        stones.add(key);
+      }
+      renderBoardObjects();
+    }
+
+    function addAction(actionType) {
+      if (isPlaying) return;
+
+      queue.push(actionType);
+      renderQueue();
+    }
+
+    function removeAction(index) {
+      if (isPlaying) return;
+
+      queue.splice(index, 1);
+      renderQueue();
+    }
+
+    function clearQueue() {
+      if (isPlaying) return;
+
+      queue = [];
+      renderQueue();
+    }
+
+    function renderQueue() {
+      const container = document.getElementById('actionQueue');
+      const countLabel = document.getElementById('queueCount');
+      container.innerHTML = '';
+      countLabel.innerText = queue.length;
+
+      if (queue.length === 0) {
+        container.innerHTML = `<span id="emptyQueueMsg" class="text-xs text-slate-400 mx-auto italic font-medium">No actions added yet. Click action buttons to build your code!</span>`;
+        return;
+      }
+
+      queue.forEach((act, idx) => {
+        const item = document.createElement('div');
+        item.id = `action-item-${idx}`;
+        let icon = '⬆️';
+        let bgClass = 'bg-emerald-100 border-emerald-300 text-emerald-800';
+        
+        if (act === 'LEFT') {
+          icon = '↩️';
+          bgClass = 'bg-sky-100 border-sky-300 text-sky-800';
+        } else if (act === 'RIGHT') {
+          icon = '↪️';
+          bgClass = 'bg-purple-100 border-purple-300 text-purple-800';
+        }
+
+        item.className = `flex-shrink-0 flex items-center gap-1 px-3 py-2 rounded-xl border-2 ${bgClass} font-bold text-xs shadow-sm transition-all`;
+        item.innerHTML = `
+          <span>${icon}</span>
+          <span>${act}</span>
+          <button onclick="removeAction(${idx})" class="ml-1 text-slate-400 hover:text-rose-600 font-bold px-1 rounded">✕</button>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function runProgram() {
+      if (isPlaying || queue.length === 0) return;
+
+      isPlaying = true;
+      toggleControlButtons(false);
+
+      let stepIndex = 0;
+
+      function executeStep() {
+        if (stepIndex >= queue.length) {
+          // Execution completed without reaching treasure
+          isPlaying = false;
+          toggleControlButtons(true);
+          clearHighlight();
+          return;
+        }
+
+        // Highlight current action
+        clearHighlight();
+        const activeElem = document.getElementById(`action-item-${stepIndex}`);
+        if (activeElem) {
+          activeElem.classList.add('action-active');
+          activeElem.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+
+        const action = queue[stepIndex];
+
+        if (action === 'MOVE') {
+          const dir = DIR_VECTORS[hero.facing];
+          const newX = hero.x + dir.x;
+          const newY = hero.y + dir.y;
+
+          // Check Out-of-Bounds
+          if (newX < 0 || newX >= gridSize || newY < 0 || newY >= gridSize) {
+            triggerBug("Out of Bounds! Hero walked off the grid.");
+            return;
+          }
+
+          // Check Stone Collision
+          if (stones.has(`${newX},${newY}`)) {
+            triggerBug("Collision! Hero hit a stone obstacle.");
+            return;
+          }
+
+          // Update Position
+          hero.x = newX;
+          hero.y = newY;
+          playSound('step');
+          renderBoardObjects();
+
+          // Check Treasure Win
+          if (hero.x === treasure.x && hero.y === treasure.y) {
+            triggerSuccess();
+            return;
+          }
+
+        } else if (action === 'LEFT') {
+          hero.facing = (hero.facing + 3) % 4; // Counter-clockwise
+          playSound('turn');
+          renderBoardObjects();
+        } else if (action === 'RIGHT') {
+          hero.facing = (hero.facing + 1) % 4; // Clockwise
+          playSound('turn');
+          renderBoardObjects();
+        }
+
+        stepIndex++;
+        activeExecutionTimer = setTimeout(executeStep, 1000);
+      }
+
+      executeStep();
+    }
+
+    function clearHighlight() {
+      document.querySelectorAll('#actionQueue > div').forEach(el => {
+        el.classList.remove('action-active');
+      });
+    }
+
+    function triggerBug(message) {
+      playSound('bug');
+      isPlaying = false;
+      toggleControlButtons(true);
+      clearHighlight();
+
+      const container = document.getElementById('boardContainer');
+      container.classList.add('bug-shake');
+      setTimeout(() => container.classList.remove('bug-shake'), 600);
+
+      document.getElementById('bugMsg').innerText = message;
+      document.getElementById('bugModal').classList.remove('hidden');
+      document.getElementById('bugModal').classList.add('flex');
+    }
+
+    function triggerSuccess() {
+      playSound('win');
+      isPlaying = false;
+      toggleControlButtons(true);
+      clearHighlight();
+
+      createConfetti();
+
+      document.getElementById('successModal').classList.remove('hidden');
+      document.getElementById('successModal').classList.add('flex');
+    }
+
+    function resetHero() {
+      if (isPlaying) {
+        clearTimeout(activeExecutionTimer);
+        isPlaying = false;
+        toggleControlButtons(true);
+        clearHighlight();
+      }
+      hero.x = 0;
+      hero.y = gridSize - 1;
+      hero.facing = 0; // Facing UP
+      renderBoardObjects();
+    }
+
+    function setBoardSize(size) {
+      if (isPlaying) return;
+
+      gridSize = size;
+      stones.clear();
+
+      // Set Start & Goal based on grid size
+      hero = { x: 0, y: gridSize - 1, facing: 0 };
+      treasure = { x: gridSize - 1, y: 0 };
+
+      // Button Styles update
+      const b5 = document.getElementById('btn5x5');
+      const b3 = document.getElementById('btn3x3');
+
+      if (size === 5) {
+        b5.className = 'py-2.5 px-3 bg-indigo-50 border-2 border-indigo-400 text-indigo-700 font-bold text-xs rounded-xl shadow-sm hover:bg-indigo-100 transition-all';
+        b3.className = 'py-2.5 px-3 bg-slate-50 border-2 border-slate-200 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-100 transition-all';
+      } else {
+        b3.className = 'py-2.5 px-3 bg-indigo-50 border-2 border-indigo-400 text-indigo-700 font-bold text-xs rounded-xl shadow-sm hover:bg-indigo-100 transition-all';
+        b5.className = 'py-2.5 px-3 bg-slate-50 border-2 border-slate-200 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-100 transition-all';
+      }
+
+      initBoard();
+    }
+
+    function clearBoard() {
+      if (isPlaying) return;
+      stones.clear();
+      resetHero();
+    }
+
+    function toggleControlButtons(enabled) {
+      document.getElementById('playBtn').disabled = !enabled;
+      document.getElementById('playBtn').style.opacity = enabled ? '1' : '0.5';
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+      document.getElementById(modalId).classList.remove('flex');
+      resetHero();
+    }
+
+    function createConfetti() {
+      const colors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
+      for (let i = 0; i < 40; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
+        document.body.appendChild(confetti);
+
+        setTimeout(() => confetti.remove(), 3500);
+      }
+    }
+
+    // Start on Page Load
+    window.onload = () => {
+      initBoard();
+    };
+  </script>
+</body>
+</html>

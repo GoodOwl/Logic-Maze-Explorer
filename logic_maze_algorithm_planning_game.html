@@ -3,268 +3,450 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Logic Maze - Learn Programming & Algorithms</title>
+  <title>Logic Maze - Algorithm Planning Game</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
 
     body {
       font-family: 'Nunito', sans-serif;
-      background-color: #f3f4f6;
+      background-color: #F8FAF9;
+      color: #2D3748;
       user-select: none;
     }
 
-    h1, h2, h3, button {
+    h1, h2, h3, button, .font-heading {
       font-family: 'Fredoka', sans-serif;
     }
 
-    /* Grid Cell Transitions */
     .grid-cell {
-      transition: background-color 0.2s ease, border-color 0.2s ease;
+      transition: background-color 0.25s ease, border-color 0.25s ease, transform 0.15s ease;
     }
 
-    /* Hero Avatar Rotation Animation */
     .hero-avatar {
       transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    /* Shake / Bug animation */
-    @keyframes blinkRed {
+    @keyframes bugFlash {
       0%, 100% { background-color: transparent; }
-      20%, 60% { background-color: rgba(239, 68, 68, 0.35); transform: translateX(-4px); }
-      40%, 80% { background-color: rgba(239, 68, 68, 0.35); transform: translateX(4px); }
+      20%, 60% { background-color: rgba(239, 68, 68, 0.3); transform: translateX(-5px); }
+      40%, 80% { background-color: rgba(239, 68, 68, 0.3); transform: translateX(5px); }
     }
 
     .bug-shake {
-      animation: blinkRed 0.6s ease-in-out;
+      animation: bugFlash 0.6s ease-in-out;
     }
 
-    /* Active Action Highlight Pulse */
     @keyframes pulseGlow {
-      0%, 100% { box-shadow: 0 0 0 0px rgba(99, 102, 241, 0.6); transform: scale(1.05); }
-      50% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); transform: scale(1.05); }
+      0%, 100% { box-shadow: 0 0 0 0px rgba(74, 124, 89, 0.6); transform: scale(1.05); }
+      50% { box-shadow: 0 0 0 8px rgba(74, 124, 89, 0); transform: scale(1.05); }
     }
 
     .action-active {
       animation: pulseGlow 1s infinite;
-      border-color: #4f46e5 !important;
-      background-color: #e0e7ff !important;
+      border-color: #4A7C59 !important;
+      background-color: #E8F0EC !important;
     }
 
-    /* Confetti Styling */
+    @keyframes trapPop {
+      0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+      70% { transform: scale(1.3) rotate(10deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+
+    .trap-spawn {
+      animation: trapPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
     .confetti {
-      position: absolute;
+      position: fixed;
       width: 10px;
       height: 10px;
-      background-color: #f00;
-      opacity: 0.8;
+      opacity: 0.9;
       border-radius: 2px;
       animation: fall 2.5s linear forwards;
+      z-index: 100;
     }
 
     @keyframes fall {
-      0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+      0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
       100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
     }
   </style>
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between p-4 md:p-6">
+<body class="min-h-screen flex flex-col justify-between p-3 sm:p-5">
 
-  <!-- Top Navigation & Header -->
-  <header class="max-w-6xl w-full mx-auto mb-4 text-center flex flex-col md:flex-row items-center justify-between gap-2 border-b border-slate-200 pb-3">
+  <!-- Header with Title & Language Switcher -->
+  <header class="max-w-6xl w-full mx-auto mb-4 bg-white p-3 sm:p-4 rounded-3xl shadow-sm border border-emerald-100 flex flex-col sm:flex-row items-center justify-between gap-3">
     <div class="flex items-center gap-3">
-      <div class="bg-indigo-500 text-white p-2.5 rounded-2xl shadow-md text-2xl">🧩</div>
-      <div class="text-left">
-        <h1 class="text-2xl md:text-3xl font-bold text-indigo-600 tracking-wide">Logic Maze Explorer</h1>
-        <p class="text-xs md:text-sm text-slate-500 font-medium">Program your hero step-by-step to reach the treasure!</p>
+      <div class="bg-emerald-600 text-white p-2.5 rounded-2xl shadow-md text-2xl flex items-center justify-center">
+        🧩
+      </div>
+      <div>
+        <h1 data-i18n="appTitle" class="text-xl sm:text-2xl font-bold text-emerald-800 leading-tight">
+          Logic Maze Explorer
+        </h1>
+        <p data-i18n="appSubtitle" class="text-xs text-slate-500 font-medium">
+          Program your hero step-by-step to reach the treasure!
+        </p>
       </div>
     </div>
-    <div class="bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl text-xs md:text-sm text-indigo-700 font-semibold flex items-center gap-2 shadow-sm">
-      <span>💡 Tip:</span> Drag stones onto the grid or click cells to set obstacles!
+
+    <div class="flex items-center gap-2">
+      <!-- Sound Toggle Button -->
+      <button id="soundToggleBtn" onclick="toggleSound()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-2xl border border-slate-200 transition-all flex items-center gap-1.5" title="Sound Effects">
+        <span id="soundIcon">🔊</span>
+        <span id="soundLabel" data-i18n="soundOn">Sound On</span>
+      </button>
+
+      <!-- Language Switcher -->
+      <div class="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-bold">
+        <button id="langEN" onclick="setLanguage('en')" class="px-3 py-1.5 rounded-xl transition-all bg-white text-emerald-700 shadow-sm">
+          🇬🇧 EN
+        </button>
+        <button id="langLT" onclick="setLanguage('lt')" class="px-3 py-1.5 rounded-xl transition-all text-slate-600 hover:text-slate-900">
+          🇱🇹 LT
+        </button>
+      </div>
     </div>
   </header>
 
-  <!-- Main Application Workspace -->
-  <main class="max-w-6xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-grow">
+  <!-- Main Application Grid -->
+  <main class="max-w-6xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5 items-start flex-grow">
 
-    <!-- LEFT COLUMN: Action Buttons -->
-    <section class="lg:col-span-3 bg-white p-5 rounded-3xl shadow-sm border border-slate-200 flex flex-col gap-4">
-      <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2 border-b border-slate-100 pb-2">
-        <span>🎮</span> Actions
+    <!-- LEFT COLUMN: Action Commands Palette -->
+    <section class="lg:col-span-3 bg-white p-4 sm:p-5 rounded-3xl shadow-sm border border-slate-200 flex flex-col gap-4">
+      <h2 class="text-base sm:text-lg font-bold text-slate-700 flex items-center gap-2 border-b border-slate-100 pb-2">
+        <span>🎮</span> <span data-i18n="actionsHeader">Actions</span>
       </h2>
-      <p class="text-xs text-slate-500">Add movements to your queue:</p>
+      <p data-i18n="actionsSub" class="text-xs text-slate-500">Add commands to your program queue:</p>
 
       <div class="flex flex-col gap-3">
-        <button onclick="addAction('MOVE')" class="group relative flex items-center gap-3 p-3.5 bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-200 hover:border-emerald-400 rounded-2xl text-emerald-800 font-bold transition-all active:scale-95 shadow-sm">
-          <span class="text-2xl bg-emerald-200 p-2 rounded-xl group-hover:scale-110 transition-transform">⬆️</span>
+        <!-- Move Forward -->
+        <button onclick="addAction('MOVE')" class="group relative flex items-center gap-3 p-3 bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-200 hover:border-emerald-400 rounded-2xl text-emerald-900 font-bold transition-all active:scale-95 shadow-sm">
+          <span class="text-2xl bg-emerald-200/80 p-2 rounded-xl group-hover:scale-110 transition-transform">⬆️</span>
           <div class="text-left">
-            <div class="text-base leading-tight">Move Forward</div>
-            <div class="text-xs text-emerald-600 font-normal">Step 1 square</div>
+            <div data-i18n="moveForward" class="text-sm font-bold leading-tight">Move forward</div>
+            <div data-i18n="moveDesc" class="text-[11px] text-emerald-700 font-normal">Step 1 square forward</div>
           </div>
         </button>
 
-        <button onclick="addAction('LEFT')" class="group relative flex items-center gap-3 p-3.5 bg-sky-50 hover:bg-sky-100 border-2 border-sky-200 hover:border-sky-400 rounded-2xl text-sky-800 font-bold transition-all active:scale-95 shadow-sm">
-          <span class="text-2xl bg-sky-200 p-2 rounded-xl group-hover:scale-110 transition-transform">↩️️</span>
+        <!-- Turn Left -->
+        <button onclick="addAction('LEFT')" class="group relative flex items-center gap-3 p-3 bg-sky-50 hover:bg-sky-100 border-2 border-sky-200 hover:border-sky-400 rounded-2xl text-sky-900 font-bold transition-all active:scale-95 shadow-sm">
+          <span class="text-2xl bg-sky-200/80 p-2 rounded-xl group-hover:scale-110 transition-transform">↩️</span>
           <div class="text-left">
-            <div class="text-base leading-tight">Turn Left</div>
-            <div class="text-xs text-sky-600 font-normal">Rotate -90°</div>
+            <div data-i18n="turnLeft" class="text-sm font-bold leading-tight">Turn left</div>
+            <div data-i18n="leftDesc" class="text-[11px] text-sky-700 font-normal">Rotate 90° counter-clockwise</div>
           </div>
         </button>
 
-        <button onclick="addAction('RIGHT')" class="group relative flex items-center gap-3 p-3.5 bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 hover:border-purple-400 rounded-2xl text-purple-800 font-bold transition-all active:scale-95 shadow-sm">
-          <span class="text-2xl bg-purple-200 p-2 rounded-xl group-hover:scale-110 transition-transform">↪️</span>
+        <!-- Turn Right -->
+        <button onclick="addAction('RIGHT')" class="group relative flex items-center gap-3 p-3 bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 hover:border-purple-400 rounded-2xl text-purple-900 font-bold transition-all active:scale-95 shadow-sm">
+          <span class="text-2xl bg-purple-200/80 p-2 rounded-xl group-hover:scale-110 transition-transform">↪️</span>
           <div class="text-left">
-            <div class="text-base leading-tight">Turn Right</div>
-            <div class="text-xs text-purple-600 font-normal">Rotate +90°</div>
+            <div data-i18n="turnRight" class="text-sm font-bold leading-tight">Turn right</div>
+            <div data-i18n="rightDesc" class="text-[11px] text-purple-700 font-normal">Rotate 90° clockwise</div>
           </div>
         </button>
       </div>
 
-      <div class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs flex flex-col gap-1">
-        <span class="font-bold flex items-center gap-1">🧭 Hero Orientation:</span>
-        <span id="heroFacingText" class="font-semibold text-amber-900">Facing UP ⬆️</span>
+      <!-- Hero Heading Tracker -->
+      <div class="mt-1 p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-xs flex flex-col gap-1">
+        <span data-i18n="heroFacingTitle" class="font-bold flex items-center gap-1">🧭 Hero Heading:</span>
+        <span id="heroFacingText" class="font-semibold text-amber-800">Facing UP ⬆️</span>
       </div>
     </section>
 
-    <!-- CENTER COLUMN: Maze Grid & Execution Controls -->
-    <section class="lg:col-span-6 flex flex-col items-center gap-5 bg-white p-5 rounded-3xl shadow-sm border border-slate-200">
+    <!-- CENTER COLUMN: Interactive Board and Program Queue -->
+    <section class="lg:col-span-6 flex flex-col items-center gap-4 bg-white p-4 sm:p-5 rounded-3xl shadow-sm border border-slate-200">
       
-      <div id="boardContainer" class="relative w-full max-w-[380px] aspect-square p-3 bg-slate-100 border-4 border-slate-300 rounded-3xl shadow-inner flex items-center justify-center overflow-hidden">
+      <!-- Grid Container -->
+      <div id="boardContainer" class="relative w-full max-w-[380px] aspect-square p-3 bg-slate-100 border-4 border-slate-200 rounded-3xl shadow-inner flex items-center justify-center overflow-hidden">
         <div id="gridBoard" class="grid w-full h-full gap-1.5 transition-all duration-300">
-          <!-- Dynamic Grid Cells generated in JS -->
+          <!-- Dynamically populated -->
         </div>
       </div>
 
-      <!-- Action Queue Bar -->
+      <!-- Action Queue Container -->
       <div class="w-full flex flex-col gap-2">
         <div class="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider px-1">
-          <span>Program Queue (<span id="queueCount">0</span>)</span>
-          <button onclick="clearQueue()" class="text-rose-500 hover:text-rose-700 normal-case font-semibold text-xs flex items-center gap-1 hover:underline">
-            🗑️ Clear Queue
+          <span data-i18n="queueTitle">Program Queue</span>
+          <button onclick="clearQueue()" data-i18n="resetQueue" class="text-rose-500 hover:text-rose-700 normal-case font-semibold text-xs flex items-center gap-1 hover:underline">
+            🗑️ Reset queue
           </button>
         </div>
 
         <div id="actionQueue" class="w-full min-h-[72px] p-2 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300">
-          <span id="emptyQueueMsg" class="text-xs text-slate-400 mx-auto italic font-medium">No actions added yet. Click action buttons to build your code!</span>
+          <span id="emptyQueueMsg" data-i18n="emptyQueue" class="text-xs text-slate-400 mx-auto italic font-medium">
+            No commands added yet. Click action buttons to construct your logic!
+          </span>
         </div>
       </div>
 
-      <!-- Play & Execution Controls -->
-      <div class="w-full flex items-center gap-3">
-        <button id="playBtn" onclick="runProgram()" class="flex-1 py-3.5 px-6 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-indigo-200 transition-all flex items-center justify-center gap-2 active:scale-95">
-          <span>▶️️</span> PLAY PROGRAM
+      <!-- Play & Stop Controls -->
+      <div class="w-full flex items-center gap-2 sm:gap-3">
+        <button id="playBtn" onclick="runProgram()" class="flex-1 py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-base sm:text-lg rounded-2xl shadow-lg hover:shadow-emerald-200 transition-all flex items-center justify-center gap-2 active:scale-95">
+          <span>▶</span> <span data-i18n="play">Run program</span>
         </button>
-        <button id="resetBtn" onclick="resetHero()" class="py-3.5 px-5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-bold text-base rounded-2xl border border-slate-300 transition-all active:scale-95 flex items-center gap-1.5" title="Reset hero position">
-          <span>↺</span> Reset Hero
+        <button id="stopBtn" onclick="stopProgram()" disabled class="py-3.5 px-4 bg-rose-100 hover:bg-rose-200 active:bg-rose-300 text-rose-700 font-bold text-base rounded-2xl border border-rose-300 transition-all active:scale-95 flex items-center gap-1.5 opacity-50 cursor-not-allowed">
+          <span>⏹</span> <span data-i18n="stop">Stop</span>
         </button>
       </div>
 
     </section>
 
-    <!-- RIGHT COLUMN: Setup Controls for Teachers/Students -->
-    <section class="lg:col-span-3 bg-white p-5 rounded-3xl shadow-sm border border-slate-200 flex flex-col gap-4">
-      <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2 border-b border-slate-100 pb-2">
-        <span>🛠️</span> Teacher Controls
+    <!-- RIGHT COLUMN: Setup and Teacher Panel -->
+    <section class="lg:col-span-3 bg-white p-4 sm:p-5 rounded-3xl shadow-sm border border-slate-200 flex flex-col gap-4">
+      <h2 class="text-base sm:text-lg font-bold text-slate-700 flex items-center gap-2 border-b border-slate-100 pb-2">
+        <span>🛠️</span> <span data-i18n="teacherControls">Setup & Teacher Panel</span>
       </h2>
 
-      <!-- Stone Tool -->
+      <!-- Stone Drag Tool -->
       <div class="flex flex-col gap-2">
-        <label class="text-xs font-semibold text-slate-500">Obstacle Tool:</label>
-        <div id="stoneDraggable" draggable="true" ondragstart="handleDragStart(event)" class="p-3 bg-amber-100 border-2 border-dashed border-amber-400 rounded-2xl flex items-center justify-between cursor-grab active:cursor-grabbing hover:bg-amber-200 transition-colors shadow-sm">
+        <label data-i18n="obstacleToolLabel" class="text-xs font-semibold text-slate-500">Obstacle Tool:</label>
+        <div id="stoneDraggable" draggable="true" ondragstart="handleDragStart(event)" class="p-3 bg-amber-50 border-2 border-dashed border-amber-300 rounded-2xl flex items-center justify-between cursor-grab active:cursor-grabbing hover:bg-amber-100 transition-colors shadow-sm">
           <div class="flex items-center gap-2">
-            <span class="text-2xl">🪨</span>
-            <span class="text-xs font-bold text-amber-900">Stone Obstacle</span>
+            <span class="text-2xl">🗿</span>
+            <span data-i18n="stone" class="text-xs font-bold text-amber-900">Stone</span>
           </div>
-          <span class="text-[10px] bg-amber-300 text-amber-900 font-bold px-2 py-0.5 rounded-full uppercase">Drag Me</span>
+          <span data-i18n="dragMe" class="text-[10px] bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full uppercase">Drag Me</span>
         </div>
-        <p class="text-[11px] text-slate-400">Tip: Drag onto cell or click any cell to toggle stones.</p>
+        <p data-i18n="stoneTip" class="text-[11px] text-slate-400">Drag stone or click grid cells to toggle obstacles.</p>
       </div>
 
-      <!-- Board Size Presets -->
-      <div class="flex flex-col gap-2 mt-2">
-        <label class="text-xs font-semibold text-slate-500">Board Size Presets:</label>
+      <!-- Trap Toggle Feature -->
+      <div class="flex flex-col gap-2 p-3 bg-amber-50 border-2 border-amber-200 rounded-2xl">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">📦</span>
+            <span data-i18n="trapTitle" class="text-xs font-bold text-amber-900">Trap (Obstacle injection)</span>
+          </div>
+          <!-- Toggle Switch -->
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="trapToggle" class="sr-only peer" onchange="toggleTrapMode(this.checked)">
+            <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+          </label>
+        </div>
+        
+        <p id="trapStatusMsg" data-i18n="trapDesc" class="text-[11px] text-amber-800 leading-snug">
+          When active, a stone blocks the hero's 5th step dynamically without causing a bug!
+        </p>
+
+        <div id="trapArmedBadge" class="hidden text-[10px] font-bold bg-amber-600 text-white px-2 py-1 rounded-xl text-center animate-pulse">
+          ⚡ <span data-i18n="trapArmed">Trap armed! Stone will appear on 5th step.</span>
+        </div>
+      </div>
+
+      <!-- Board Size Options -->
+      <div class="flex flex-col gap-2">
+        <label data-i18n="boardSizeLabel" class="text-xs font-semibold text-slate-500">Grid Presets:</label>
         <div class="grid grid-cols-2 gap-2">
-          <button onclick="setBoardSize(5)" id="btn5x5" class="py-2.5 px-3 bg-indigo-50 border-2 border-indigo-400 text-indigo-700 font-bold text-xs rounded-xl shadow-sm hover:bg-indigo-100 transition-all">
-            📐 Standard (5x5)
+          <button onclick="setBoardSize(5)" id="btn5x5" class="py-2 px-2.5 bg-emerald-50 border-2 border-emerald-500 text-emerald-800 font-bold text-xs rounded-xl shadow-sm hover:bg-emerald-100 transition-all">
+            <span data-i18n="standardBoard">Standard (5x5)</span>
           </button>
-          <button onclick="setBoardSize(3)" id="btn3x3" class="py-2.5 px-3 bg-slate-50 border-2 border-slate-200 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-100 transition-all">
-            🔍 Mini (3x3)
+          <button onclick="setBoardSize(3)" id="btn3x3" class="py-2 px-2.5 bg-slate-50 border-2 border-slate-200 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-100 transition-all">
+            <span data-i18n="miniBoard">Mini board (3x3)</span>
           </button>
         </div>
       </div>
 
-      <!-- Board Clear Controls -->
-      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col gap-2">
-        <button onclick="clearBoard()" class="w-full py-2.5 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition-all flex items-center justify-center gap-2">
-          <span>🧹</span> Clear All Stones
+      <!-- Clear Board Button -->
+      <div class="mt-auto pt-3 border-t border-slate-100 flex flex-col gap-2">
+        <button onclick="clearBoard()" class="w-full py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition-all flex items-center justify-center gap-1.5">
+          <span>🧹</span> <span data-i18n="clearBoard">Clear board</span>
         </button>
       </div>
     </section>
 
   </main>
 
-  <!-- Footer -->
-  <footer class="max-w-6xl w-full mx-auto mt-6 text-center text-xs text-slate-400 border-t border-slate-200 pt-3">
-    Logic Maze Web Game &bull; Teaching Logical Thinking & Step-by-Step Programming
+  <footer class="max-w-6xl w-full mx-auto mt-5 text-center text-xs text-slate-400 border-t border-slate-200 pt-3">
+    Logic Maze Explorer &bull; Educational Planning & Algorithmic Thinking Game
   </footer>
 
   <!-- BUG MODAL -->
-  <div id="bugModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+  <div id="bugModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
     <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border-4 border-rose-400 flex flex-col items-center gap-4 animate-bounce-once">
       <div class="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center text-5xl shadow-inner">
         🐞
       </div>
       <div>
-        <h3 class="text-2xl font-bold text-rose-600">BUG DETECTED!</h3>
-        <p id="bugMsg" class="text-sm text-slate-600 mt-1 font-medium">The hero hit an obstacle or moved off the grid!</p>
+        <h3 data-i18n="bugTitle" class="text-2xl font-bold text-rose-600">BUG!</h3>
+        <p id="bugMsg" data-i18n="bugDesc" class="text-sm text-slate-600 mt-1 font-medium">
+          The hero hit an obstacle or walked off the grid. Debug your code!
+        </p>
       </div>
-      <button onclick="closeModal('bugModal')" class="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95">
+      <button onclick="closeModal('bugModal')" data-i18n="tryAgain" class="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95">
         Try Again 🔄
       </button>
     </div>
   </div>
 
+  <!-- TRAP OBSTACLE REROUTE MODAL -->
+  <div id="trapModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full text-center shadow-2xl border-4 border-amber-400 flex flex-col items-center gap-4 animate-pop">
+      <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center text-5xl shadow-inner">
+        ⚠️️
+      </div>
+      <div>
+        <h3 data-i18n="trapAlertTitle" class="text-2xl font-bold text-amber-700">Obstacle Ahead!</h3>
+        <p id="trapAlertMsg" data-i18n="trapAlertDesc" class="text-sm text-slate-700 mt-2 font-medium leading-relaxed">
+          An unexpected obstacle appeared on the way! Program stopped – reroute the hero.
+        </p>
+      </div>
+      <button onclick="closeTrapModal()" data-i18n="rerouteBtn" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95">
+        Adapt & Reroute 🧠
+      </button>
+    </div>
+  </div>
+
   <!-- SUCCESS MODAL -->
-  <div id="successModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+  <div id="successModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
     <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border-4 border-emerald-400 flex flex-col items-center gap-4 relative overflow-hidden">
       <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-5xl shadow-inner">
         💎
       </div>
       <div>
-        <h3 class="text-2xl font-bold text-emerald-600">SUCCESS! 🎉</h3>
-        <p class="text-sm text-slate-600 mt-1 font-medium">Awesome logic! Your hero found the treasure!</p>
+        <h3 data-i18n="successTitle" class="text-2xl font-bold text-emerald-600">SUCCESS!</h3>
+        <p data-i18n="successDesc" class="text-sm text-slate-600 mt-1 font-medium">
+          The hero reached the treasure!
+        </p>
       </div>
-      <button onclick="closeModal('successModal')" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95">
-        Play Next Level 🚀
+      <button onclick="closeModal('successModal')" data-i18n="nextLevel" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95">
+        Awesome! 🚀
       </button>
     </div>
   </div>
 
   <script>
+    // Contextual Educational Translations (EN / LT)
+    const translations = {
+      en: {
+        appTitle: "Logic Maze Explorer",
+        appSubtitle: "Program your hero step-by-step to reach the treasure!",
+        soundOn: "Sound On",
+        soundOff: "Sound Off",
+        actionsHeader: "Actions",
+        actionsSub: "Add commands to your program queue:",
+        moveForward: "Move forward",
+        moveDesc: "Step 1 square forward",
+        turnLeft: "Turn left",
+        leftDesc: "Rotate 90° counter-clockwise",
+        turnRight: "Turn right",
+        rightDesc: "Rotate 90° clockwise",
+        heroFacingTitle: "🧭 Hero Heading:",
+        facingUP: "Facing UP ⬆️",
+        facingRIGHT: "Facing RIGHT ↪️",
+        facingDOWN: "Facing DOWN ⬇️",
+        facingLEFT: "Facing LEFT ↩️",
+        queueTitle: "Program Queue",
+        resetQueue: "Reset queue",
+        emptyQueue: "No commands added yet. Click action buttons to construct your logic!",
+        play: "Run program",
+        stop: "Stop",
+        teacherControls: "Setup & Teacher Panel",
+        obstacleToolLabel: "Obstacle Tool:",
+        stone: "Stone",
+        dragMe: "Drag Me",
+        stoneTip: "Drag stone or click grid cells to toggle obstacles.",
+        trapTitle: "Trap (Obstacle injection)",
+        trapDesc: "When active, a stone blocks the hero's 5th step dynamically without causing a bug!",
+        trapArmed: "Trap armed! Stone will appear on 5th step.",
+        boardSizeLabel: "Grid Presets:",
+        standardBoard: "Standard board (5x5)",
+        miniBoard: "Mini board (3x3)",
+        clearBoard: "Clear board",
+        bugTitle: "BUG!",
+        bugDesc: "The hero hit an obstacle or walked off the grid. Debug your code!",
+        bugOutOfBounds: "Out of bounds! The hero walked off the maze grid.",
+        bugHitStone: "Collision! The hero hit a stone obstacle.",
+        tryAgain: "Try Again 🔄",
+        trapAlertTitle: "Obstacle Ahead!",
+        trapAlertDesc: "An unexpected obstacle appeared on the way! Program stopped – reroute the hero.",
+        rerouteBtn: "Adapt & Reroute 🧠",
+        successTitle: "SUCCESS!",
+        successDesc: "The hero reached the treasure!",
+        nextLevel: "Awesome! 🚀"
+      },
+      lt: {
+        appTitle: "Išmanusis Labirintas",
+        appSubtitle: "Sudarykite programą ir nuveskite herojų prie lobio!",
+        soundOn: "Garsas įjungtas",
+        soundOff: "Garsas išjungtas",
+        actionsHeader: "Komandos",
+        actionsSub: "Pridėkite veiksmas į komandų eilutę:",
+        moveForward: "Judėti pirmyn",
+        moveDesc: "Pažengti 1 laukelį pirmyn",
+        turnLeft: "Pasisukti kairėn",
+        leftDesc: "Pasisukti 90° prieš laikrodžio rodyklę",
+        turnRight: "Pasisukti dešinėn",
+        rightDesc: "Pasisukti 90° pagal laikrodžio rodyklę",
+        heroFacingTitle: "🧭 Herojaus kryptis:",
+        facingUP: "Žiūri AUKŠTYN ⬆️",
+        facingRIGHT: "Žiūri DEŠINĖN ↪️",
+        facingDOWN: "Žiūri ŽEMYN ⬇️",
+        facingLEFT: "Žiūri KAIRĖN ↩️",
+        queueTitle: "Programos komandų seka",
+        resetQueue: "Išvalyti komandas",
+        emptyQueue: "Komandų dar nėra. Spustelėkite veiksmų mygtukus!",
+        play: "Paleisti programą",
+        stop: "Stabdyti",
+        teacherControls: "Mokytojo valdymo skydelis",
+        obstacleToolLabel: "Kliūties įrankis:",
+        stone: "Akmuo / Kliūtis",
+        dragMe: "Tempti",
+        stoneTip: "Užtempkite akmenį arba spustelėkite laukelį.",
+        trapTitle: "Spąstai (Pedagogo trikdis)",
+        trapDesc: "Prieš herojui žengiant 5-ąjį žingsnį, iškils akmuo – herojus sustos saugiai!",
+        trapArmed: "Spąstai paruošti! 5-ajame žingsnyje iškils akmuo.",
+        boardSizeLabel: "Lentos dydis:",
+        standardBoard: "Standartinė lenta (5x5)",
+        miniBoard: "Maža lenta (3x3)",
+        clearBoard: "Atstatyti lentą",
+        bugTitle: "KLAIDA!",
+        bugDesc: "Herojus atsitrenkė į kliūtį arba iškrito iš ribų. Ištaisykite programą!",
+        bugOutOfBounds: "Iškritote iš ribų! Herojus išėjo už labirinto ribų.",
+        bugHitStone: "Kliūtis! Herojus atsitrenkė į akmenį.",
+        tryAgain: "Bandyti dar kartą 🔄",
+        trapAlertTitle: "Kliūtis kelyje!",
+        trapAlertDesc: "Kelyje atsirado netikėta kliūtis! Programa sustabdyta – persplanuokite maršrutą.",
+        rerouteBtn: "Persplanuoti maršrutą 🧠",
+        successTitle: "VALIO! PAVYKO!",
+        successDesc: "Herojus sėkmingai pasiekė lobį!",
+        nextLevel: "Puiku! 🚀"
+      }
+    };
+
     // State Variables
-    let gridSize = 5; // Default 5x5
-    let hero = { x: 0, y: 4, facing: 0 }; // facing: 0=UP, 1=RIGHT, 2=DOWN, 3=LEFT
+    let currentLang = 'en';
+    let soundEnabled = true;
+    let gridSize = 5;
+    let hero = { x: 0, y: 4, facing: 0 }; // 0=UP, 1=RIGHT, 2=DOWN, 3=LEFT
     let treasure = { x: 4, y: 0 };
-    let stones = new Set(); // Stores 'x,y' strings
+    let stones = new Set();
     let queue = [];
     let isPlaying = false;
-    let activeExecutionTimer = null;
+    let executionTimer = null;
+    let stepCounter = 0;
+    let trapEnabled = false;
 
-    // Directions vectors: UP, RIGHT, DOWN, LEFT
+    // Vectors: UP, RIGHT, DOWN, LEFT
     const DIR_VECTORS = [
-      { x: 0, y: -1, name: 'UP ⬆️' },
-      { x: 1, y: 0, name: 'RIGHT ↪️' },
-      { x: 0, y: 1, name: 'DOWN ⬇️' },
-      { x: -1, y: 0, name: 'LEFT ↩️' }
+      { x: 0, y: -1, langKey: 'facingUP' },
+      { x: 1, y: 0, langKey: 'facingRIGHT' },
+      { x: 0, y: 1, langKey: 'facingDOWN' },
+      { x: -1, y: 0, langKey: 'facingLEFT' }
     ];
 
-    // Audio Synthesizer via Web Audio API
+    // Web Audio Synthesizer
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
     function playSound(type) {
+      if (!soundEnabled) return;
       if (audioCtx.state === 'suspended') {
         audioCtx.resume();
       }
+
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.connect(gain);
@@ -272,43 +454,87 @@
 
       if (type === 'step') {
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(160, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
         osc.start();
         osc.stop(audioCtx.currentTime + 0.1);
       } else if (type === 'turn') {
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.frequency.setValueAtTime(420, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(620, audioCtx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
         osc.start();
-        osc.stop(audioCtx.currentTime + 0.1);
+        osc.stop(audioCtx.currentTime + 0.12);
+      } else if (type === 'trap') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(350, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
       } else if (type === 'bug') {
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(200, audioCtx.currentTime);
         osc.frequency.setValueAtTime(110, audioCtx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
         osc.start();
         osc.stop(audioCtx.currentTime + 0.4);
       } else if (type === 'win') {
-        const notes = [261.63, 329.63, 392.00, 523.25]; // C E G C
+        const notes = [261.63, 329.63, 392.00, 523.25];
         notes.forEach((freq, idx) => {
           const noteOsc = audioCtx.createOscillator();
           const noteGain = audioCtx.createGain();
           noteOsc.connect(noteGain);
-          noteGain.connect(audioCtx.destination);
+          noteOsc.connect(audioCtx.destination);
           noteOsc.type = 'sine';
           noteOsc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.12);
-          noteGain.gain.setValueAtTime(0.2, audioCtx.currentTime + idx * 0.12);
+          noteGain.gain.setValueAtTime(0.18, audioCtx.currentTime + idx * 0.12);
           noteGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + idx * 0.12 + 0.3);
           noteOsc.start(audioCtx.currentTime + idx * 0.12);
           noteOsc.stop(audioCtx.currentTime + idx * 0.12 + 0.3);
         });
       }
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      const label = document.getElementById('soundLabel');
+      const icon = document.getElementById('soundIcon');
+      
+      if (soundEnabled) {
+        label.innerText = translations[currentLang].soundOn;
+        icon.innerText = '🔊';
+      } else {
+        label.innerText = translations[currentLang].soundOff;
+        icon.innerText = '🔇';
+      }
+    }
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      
+      document.getElementById('langEN').className = lang === 'en' 
+        ? 'px-3 py-1.5 rounded-xl transition-all bg-white text-emerald-700 shadow-sm font-bold' 
+        : 'px-3 py-1.5 rounded-xl transition-all text-slate-600 hover:text-slate-900 font-bold';
+
+      document.getElementById('langLT').className = lang === 'lt' 
+        ? 'px-3 py-1.5 rounded-xl transition-all bg-white text-emerald-700 shadow-sm font-bold' 
+        : 'px-3 py-1.5 rounded-xl transition-all text-slate-600 hover:text-slate-900 font-bold';
+
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (translations[lang] && translations[lang][key]) {
+          el.innerText = translations[lang][key];
+        }
+      });
+
+      renderBoardObjects();
+      renderQueue();
     }
 
     function initBoard() {
@@ -324,7 +550,6 @@
           cell.dataset.x = x;
           cell.dataset.y = y;
 
-          // Drag and Drop listeners
           cell.ondragover = (e) => e.preventDefault();
           cell.ondrop = (e) => handleDrop(e, x, y);
           cell.onclick = () => handleCellClick(x, y);
@@ -336,7 +561,6 @@
     }
 
     function renderBoardObjects() {
-      // Clear previous cell contents
       document.querySelectorAll('.grid-cell').forEach(cell => cell.innerHTML = '');
 
       // Render Stones
@@ -344,14 +568,14 @@
         const [sx, sy] = key.split(',').map(Number);
         const cell = getCell(sx, sy);
         if (cell) {
-          cell.innerHTML = `<span class="text-2xl md:text-3xl select-none animate-pop">🪨</span>`;
+          cell.innerHTML = `<span class="text-2xl sm:text-3xl select-none animate-pop">🗿</span>`;
         }
       });
 
       // Render Treasure
       const treasureCell = getCell(treasure.x, treasure.y);
       if (treasureCell) {
-        treasureCell.innerHTML = `<span class="text-2xl md:text-3xl select-none animate-pulse">💎</span>`;
+        treasureCell.innerHTML = `<span class="text-2xl sm:text-3xl select-none animate-pulse">💎</span>`;
       }
 
       // Render Hero
@@ -359,14 +583,14 @@
       if (heroCell) {
         const rotationDeg = hero.facing * 90;
         heroCell.innerHTML = `
-          <div class="hero-avatar text-2xl md:text-3xl flex items-center justify-center" style="transform: rotate(${rotationDeg}deg);">
+          <div class="hero-avatar text-2xl sm:text-3xl flex items-center justify-center" style="transform: rotate(${rotationDeg}deg);">
             🤖
           </div>
         `;
       }
 
-      // Update orientation text label
-      document.getElementById('heroFacingText').innerText = `Facing ${DIR_VECTORS[hero.facing].name}`;
+      const headingKey = DIR_VECTORS[hero.facing].langKey;
+      document.getElementById('heroFacingText').innerText = translations[currentLang][headingKey];
     }
 
     function getCell(x, y) {
@@ -388,7 +612,6 @@
     }
 
     function toggleStone(x, y) {
-      // Avoid placing stone on hero or treasure
       if ((x === hero.x && y === hero.y) || (x === treasure.x && y === treasure.y)) return;
 
       const key = `${x},${y}`;
@@ -400,35 +623,44 @@
       renderBoardObjects();
     }
 
+    function toggleTrapMode(enabled) {
+      trapEnabled = enabled;
+      const armedBadge = document.getElementById('trapArmedBadge');
+      if (trapEnabled) {
+        armedBadge.classList.remove('hidden');
+      } else {
+        armedBadge.classList.add('hidden');
+      }
+    }
+
     function addAction(actionType) {
       if (isPlaying) return;
-
       queue.push(actionType);
       renderQueue();
     }
 
     function removeAction(index) {
       if (isPlaying) return;
-
       queue.splice(index, 1);
       renderQueue();
     }
 
     function clearQueue() {
       if (isPlaying) return;
-
       queue = [];
       renderQueue();
     }
 
     function renderQueue() {
       const container = document.getElementById('actionQueue');
-      const countLabel = document.getElementById('queueCount');
       container.innerHTML = '';
-      countLabel.innerText = queue.length;
 
       if (queue.length === 0) {
-        container.innerHTML = `<span id="emptyQueueMsg" class="text-xs text-slate-400 mx-auto italic font-medium">No actions added yet. Click action buttons to build your code!</span>`;
+        container.innerHTML = `
+          <span id="emptyQueueMsg" class="text-xs text-slate-400 mx-auto italic font-medium">
+            ${translations[currentLang].emptyQueue}
+          </span>
+        `;
         return;
       }
 
@@ -437,19 +669,22 @@
         item.id = `action-item-${idx}`;
         let icon = '⬆️';
         let bgClass = 'bg-emerald-100 border-emerald-300 text-emerald-800';
-        
+        let label = translations[currentLang].moveForward;
+
         if (act === 'LEFT') {
           icon = '↩️';
           bgClass = 'bg-sky-100 border-sky-300 text-sky-800';
+          label = translations[currentLang].turnLeft;
         } else if (act === 'RIGHT') {
           icon = '↪️';
           bgClass = 'bg-purple-100 border-purple-300 text-purple-800';
+          label = translations[currentLang].turnRight;
         }
 
-        item.className = `flex-shrink-0 flex items-center gap-1 px-3 py-2 rounded-xl border-2 ${bgClass} font-bold text-xs shadow-sm transition-all`;
+        item.className = `flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 ${bgClass} font-bold text-xs shadow-sm transition-all`;
         item.innerHTML = `
           <span>${icon}</span>
-          <span>${act}</span>
+          <span>${label}</span>
           <button onclick="removeAction(${idx})" class="ml-1 text-slate-400 hover:text-rose-600 font-bold px-1 rounded">✕</button>
         `;
         container.appendChild(item);
@@ -460,20 +695,17 @@
       if (isPlaying || queue.length === 0) return;
 
       isPlaying = true;
-      toggleControlButtons(false);
+      stepCounter = 0;
+      toggleExecutionStateUI(true);
 
       let stepIndex = 0;
 
       function executeStep() {
-        if (stepIndex >= queue.length) {
-          // Execution completed without reaching treasure
-          isPlaying = false;
-          toggleControlButtons(true);
-          clearHighlight();
+        if (!isPlaying || stepIndex >= queue.length) {
+          stopProgram();
           return;
         }
 
-        // Highlight current action
         clearHighlight();
         const activeElem = document.getElementById(`action-item-${stepIndex}`);
         if (activeElem) {
@@ -484,49 +716,78 @@
         const action = queue[stepIndex];
 
         if (action === 'MOVE') {
+          stepCounter++;
           const dir = DIR_VECTORS[hero.facing];
-          const newX = hero.x + dir.x;
-          const newY = hero.y + dir.y;
+          const targetX = hero.x + dir.x;
+          const targetY = hero.y + dir.y;
 
-          // Check Out-of-Bounds
-          if (newX < 0 || newX >= gridSize || newY < 0 || newY >= gridSize) {
-            triggerBug("Out of Bounds! Hero walked off the grid.");
+          // TRAP MECHANIC: On 5th movement step, drop stone BEFORE forward movement!
+          if (trapEnabled && stepCounter === 5) {
+            // Disarm trap automatically
+            trapEnabled = false;
+            document.getElementById('trapToggle').checked = false;
+            document.getElementById('trapArmedBadge').classList.add('hidden');
+
+            // Spawn stone at target cell
+            if (targetX >= 0 && targetX < gridSize && targetY >= 0 && targetY < gridSize) {
+              stones.add(`${targetX},${targetY}`);
+              renderBoardObjects();
+
+              const trapCell = getCell(targetX, targetY);
+              if (trapCell) trapCell.classList.add('trap-spawn');
+            }
+
+            // Stop hero safely BEFORE stepping forward and alert student to reroute
+            triggerTrapAlert();
             return;
           }
 
-          // Check Stone Collision
-          if (stones.has(`${newX},${newY}`)) {
-            triggerBug("Collision! Hero hit a stone obstacle.");
+          // Out-of-bounds Check
+          if (targetX < 0 || targetX >= gridSize || targetY < 0 || targetY >= gridSize) {
+            triggerBug(translations[currentLang].bugOutOfBounds);
             return;
           }
 
-          // Update Position
-          hero.x = newX;
-          hero.y = newY;
+          // Existing Stone Collision Check
+          if (stones.has(`${targetX},${targetY}`)) {
+            triggerBug(translations[currentLang].bugHitStone);
+            return;
+          }
+
+          // Safe Forward Step
+          hero.x = targetX;
+          hero.y = targetY;
           playSound('step');
           renderBoardObjects();
 
-          // Check Treasure Win
+          // Treasure Check
           if (hero.x === treasure.x && hero.y === treasure.y) {
             triggerSuccess();
             return;
           }
 
         } else if (action === 'LEFT') {
-          hero.facing = (hero.facing + 3) % 4; // Counter-clockwise
+          hero.facing = (hero.facing + 3) % 4;
           playSound('turn');
           renderBoardObjects();
         } else if (action === 'RIGHT') {
-          hero.facing = (hero.facing + 1) % 4; // Clockwise
+          hero.facing = (hero.facing + 1) % 4;
           playSound('turn');
           renderBoardObjects();
         }
 
         stepIndex++;
-        activeExecutionTimer = setTimeout(executeStep, 1000);
+        executionTimer = setTimeout(executeStep, 1000);
       }
 
       executeStep();
+    }
+
+    function stopProgram() {
+      if (executionTimer) clearTimeout(executionTimer);
+      isPlaying = false;
+      toggleExecutionStateUI(false);
+      clearHighlight();
     }
 
     function clearHighlight() {
@@ -537,9 +798,7 @@
 
     function triggerBug(message) {
       playSound('bug');
-      isPlaying = false;
-      toggleControlButtons(true);
-      clearHighlight();
+      stopProgram();
 
       const container = document.getElementById('boardContainer');
       container.classList.add('bug-shake');
@@ -550,11 +809,23 @@
       document.getElementById('bugModal').classList.add('flex');
     }
 
+    function triggerTrapAlert() {
+      playSound('trap');
+      stopProgram();
+
+      document.getElementById('trapAlertMsg').innerText = translations[currentLang].trapAlertDesc;
+      document.getElementById('trapModal').classList.remove('hidden');
+      document.getElementById('trapModal').classList.add('flex');
+    }
+
+    function closeTrapModal() {
+      document.getElementById('trapModal').classList.add('hidden');
+      document.getElementById('trapModal').classList.remove('flex');
+    }
+
     function triggerSuccess() {
       playSound('win');
-      isPlaying = false;
-      toggleControlButtons(true);
-      clearHighlight();
+      stopProgram();
 
       createConfetti();
 
@@ -563,15 +834,10 @@
     }
 
     function resetHero() {
-      if (isPlaying) {
-        clearTimeout(activeExecutionTimer);
-        isPlaying = false;
-        toggleControlButtons(true);
-        clearHighlight();
-      }
+      stopProgram();
       hero.x = 0;
       hero.y = gridSize - 1;
-      hero.facing = 0; // Facing UP
+      hero.facing = 0;
       renderBoardObjects();
     }
 
@@ -581,20 +847,18 @@
       gridSize = size;
       stones.clear();
 
-      // Set Start & Goal based on grid size
       hero = { x: 0, y: gridSize - 1, facing: 0 };
       treasure = { x: gridSize - 1, y: 0 };
 
-      // Button Styles update
       const b5 = document.getElementById('btn5x5');
       const b3 = document.getElementById('btn3x3');
 
       if (size === 5) {
-        b5.className = 'py-2.5 px-3 bg-indigo-50 border-2 border-indigo-400 text-indigo-700 font-bold text-xs rounded-xl shadow-sm hover:bg-indigo-100 transition-all';
-        b3.className = 'py-2.5 px-3 bg-slate-50 border-2 border-slate-200 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-100 transition-all';
+        b5.className = 'py-2 px-2.5 bg-emerald-50 border-2 border-emerald-500 text-emerald-800 font-bold text-xs rounded-xl shadow-sm hover:bg-emerald-100 transition-all';
+        b3.className = 'py-2 px-2.5 bg-slate-50 border-2 border-slate-200 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-100 transition-all';
       } else {
-        b3.className = 'py-2.5 px-3 bg-indigo-50 border-2 border-indigo-400 text-indigo-700 font-bold text-xs rounded-xl shadow-sm hover:bg-indigo-100 transition-all';
-        b5.className = 'py-2.5 px-3 bg-slate-50 border-2 border-slate-200 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-100 transition-all';
+        b3.className = 'py-2 px-2.5 bg-emerald-50 border-2 border-emerald-500 text-emerald-800 font-bold text-xs rounded-xl shadow-sm hover:bg-emerald-100 transition-all';
+        b5.className = 'py-2 px-2.5 bg-slate-50 border-2 border-slate-200 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-100 transition-all';
       }
 
       initBoard();
@@ -606,9 +870,21 @@
       resetHero();
     }
 
-    function toggleControlButtons(enabled) {
-      document.getElementById('playBtn').disabled = !enabled;
-      document.getElementById('playBtn').style.opacity = enabled ? '1' : '0.5';
+    function toggleExecutionStateUI(running) {
+      const playBtn = document.getElementById('playBtn');
+      const stopBtn = document.getElementById('stopBtn');
+
+      if (running) {
+        playBtn.disabled = true;
+        playBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        stopBtn.disabled = false;
+        stopBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      } else {
+        playBtn.disabled = false;
+        playBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        stopBtn.disabled = true;
+        stopBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      }
     }
 
     function closeModal(modalId) {
@@ -618,8 +894,8 @@
     }
 
     function createConfetti() {
-      const colors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
-      for (let i = 0; i < 40; i++) {
+      const colors = ['#4A7C59', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
+      for (let i = 0; i < 35; i++) {
         const confetti = document.createElement('div');
         confetti.className = 'confetti';
         confetti.style.left = Math.random() * 100 + 'vw';
@@ -627,12 +903,12 @@
         confetti.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
         document.body.appendChild(confetti);
 
-        setTimeout(() => confetti.remove(), 3500);
+        setTimeout(() => confetti.remove(), 3000);
       }
     }
 
-    // Start on Page Load
     window.onload = () => {
+      setLanguage('en');
       initBoard();
     };
   </script>
